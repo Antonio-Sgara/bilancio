@@ -1029,9 +1029,13 @@
       <div style="width:36px;"></div>
     </div>
 
-    <div style="padding:8px 22px 14px;">
+    <div style="padding:8px 22px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div style="font-family:'Instrument Serif',serif;font-size:34px;line-height:1;">Statistiche</div>
-      <div style="font-size:12px;color:var(--text-dim);margin-top:6px;" id="stats-year-label">2026</div>
+      <div class="year-pill">
+        <button onclick="App.changeYear(-1)">‹</button>
+        <span id="stats-year-label">2026</span>
+        <button onclick="App.changeYear(1)">›</button>
+      </div>
     </div>
 
     <!-- KPI cards -->
@@ -1069,6 +1073,12 @@
     <div class="stats-section" id="stats-top-sec">
       <div class="stats-section-title">Voci di spesa più alte</div>
       <div id="stats-top-rows"></div>
+    </div>
+
+    <!-- Tutte le voci Primario -->
+    <div class="stats-section" id="stats-primario-sec">
+      <div class="stats-section-title">Tutte le spese Primario</div>
+      <div id="stats-primario-rows"></div>
     </div>
 
     <!-- Mese vs precedente -->
@@ -1684,6 +1694,49 @@ const App = (() => {
       `).join('');
     }
 
+    // === Tutte le spese Primario ===
+    const primSec = document.getElementById('stats-primario-sec');
+    const primRows = document.getElementById('stats-primario-rows');
+    const primMap = new Map();
+    months.forEach(m => {
+      const md = monthData(y, m.idx);
+      md.expenses.forEach(e => {
+        if (e.credit) return;
+        if (e.category !== 'primario') return;
+        const key = (e.desc || '').trim().toLowerCase() || '__primario__';
+        const display = (e.desc || '').trim() || 'Primario';
+        if (!primMap.has(key)) primMap.set(key, { display, total:0, count:0 });
+        const it = primMap.get(key);
+        it.total += e.amount;
+        it.count += 1;
+      });
+    });
+    const primList = [...primMap.values()].sort((a,b) => b.total - a.total);
+    if (primList.length === 0){
+      primSec.style.display = 'none';
+    } else {
+      primSec.style.display = 'block';
+      const primTot = primList.reduce((s, v) => s + v.total, 0);
+      primRows.innerHTML = primList.map((v, i) => {
+        const pct = primTot > 0 ? (v.total / primTot * 100) : 0;
+        return `
+          <div class="stats-top-row">
+            <span class="rank">${i+1}</span>
+            <div class="body">
+              <div class="desc">${escapeHtml(v.display)}</div>
+              <div class="meta">${v.count} ${v.count===1?'voce':'voci'} · ${pct.toFixed(1)}%</div>
+            </div>
+            <div class="amt num">${fmtCur(v.total)}</div>
+          </div>
+        `;
+      }).join('') + `
+        <div class="stats-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:14px;">
+          <span class="lbl" style="font-weight:600;color:var(--text);">Totale Primario</span>
+          <span class="val" style="color:var(--red);">${fmtCur(primTot)}</span>
+        </div>
+      `;
+    }
+
     // === Mese vs precedente ===
     const cmpSec = document.getElementById('stats-cmp-sec');
     const cmpRows = document.getElementById('stats-cmp-rows');
@@ -1901,7 +1954,14 @@ const App = (() => {
     viewYear += d;
     state.currentYear = viewYear;
     save();
-    renderHome();
+    // Re-render whichever screen is currently active
+    const active = document.querySelector('.screen.active')?.id;
+    if (active === 'screen-stats') renderStats();
+    else if (active === 'screen-month'){
+      // Month detail year follows too: stay on same month index
+      renderMonth();
+    }
+    else renderHome();
   }
 
   // ---- Rendering: Month detail ----
