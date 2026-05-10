@@ -350,7 +350,7 @@
 
   /* Expense list */
   .exp-list{
-    margin: 0 16px;
+    margin: 0 16px 90px;
     background:var(--surface);
     border:1px solid var(--border-soft);
     border-radius:var(--radius);
@@ -375,6 +375,54 @@
   .exp-row .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .exp-row .amt{font-size:15px;font-weight:700;color:var(--red);white-space:nowrap;}
   .exp-row .amt.credit{color:var(--green);}
+
+  /* Filter button + chips */
+  .filter-btn{
+    width:32px;height:32px;border-radius:10px;
+    background:var(--surface);border:1px solid var(--border-soft);
+    color:var(--text-dim);position:relative;
+    display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .filter-btn svg{width:16px;height:16px;}
+  .filter-btn:active{background:var(--surface-2);}
+  .filter-dot{
+    position:absolute;top:6px;right:6px;
+    width:6px;height:6px;border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 0 2px var(--surface);
+  }
+  .filter-chips{
+    display:flex;gap:6px;flex-wrap:wrap;
+    padding: 0 16px 12px;margin-top:-4px;
+  }
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:99px;padding:5px 4px 5px 10px;
+    font-size:11px;font-weight:600;color:var(--text);
+    cursor:pointer;
+    line-height:1.2;
+  }
+  .chip .x{
+    width:18px;height:18px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);
+  }
+  .chip:active .x{background:var(--surface);color:var(--red);}
+
+  .btn-sec{
+    width:100%;padding:14px;
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--border-soft);
+    border-radius:14px;
+    font-size:14px;font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn-sec:active{background:var(--surface);}
   .exp-row.group{cursor:pointer;}
   .exp-row.group:active{background:var(--surface);}
   .exp-row .count-badge{
@@ -417,13 +465,27 @@
   }
   .group-item .del-btn svg{width:16px;height:16px;}
   .group-item .del-btn:active{background:var(--surface-2);color:var(--red);}
-  .exp-row .del-btn{
+  .exp-row .del-btn, .exp-row .edit-btn{
     background:transparent;border:none;color:var(--text-faint);
     width:32px;height:32px;border-radius:50%;cursor:pointer;
     display:none;align-items:center;justify-content:center;flex-shrink:0;
+    padding:0;
   }
-  .exp-row.editable .del-btn{display:inline-flex;}
+  .exp-row .del-btn svg, .exp-row .edit-btn svg{width:16px;height:16px;}
+  .exp-row.editable .del-btn, .exp-row.editable .edit-btn{display:inline-flex;}
   .exp-row .del-btn:active{background:var(--surface-2);color:var(--red);}
+  .exp-row .edit-btn:active{background:var(--surface-2);color:var(--gold);}
+  /* Group rows: edit-btn doesn't apply (no per-group edit, use modal); only delete shows */
+  .exp-row.group .edit-btn{display:none !important;}
+
+  /* Group items edit btn (in modal) */
+  .group-item .edit-btn{
+    width:30px;height:30px;border-radius:8px;border:none;background:transparent;
+    color:var(--text-faint);display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;padding:0;
+  }
+  .group-item .edit-btn svg{width:16px;height:16px;}
+  .group-item .edit-btn:active{background:var(--surface-2);color:var(--gold);}
 
   .empty-state{
     padding: 28px 20px;text-align:center;color:var(--text-dim);font-size:13px;
@@ -921,10 +983,16 @@
     <div class="budgets" id="budgets"></div>
 
     <!-- Expense list -->
-    <div class="section-title">
-      Movimenti
-      <small id="exp-count">0 voci</small>
+    <div class="section-title" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <span>Movimenti <small id="exp-count" style="margin-left:6px;">0 voci</small></span>
+      <button class="filter-btn" onclick="App.openFilters()" id="filter-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M6 12h12M10 18h4"/>
+        </svg>
+        <span class="filter-dot" id="filter-dot" style="display:none;"></span>
+      </button>
     </div>
+    <div class="filter-chips" id="filter-chips" style="display:none;"></div>
     <div class="exp-list" id="exp-list"></div>
   </section>
 
@@ -1152,7 +1220,7 @@
   <!-- Add sheet -->
   <div class="sheet" id="sheet-add">
     <div class="sheet-handle"></div>
-    <h3>Aggiungi</h3>
+    <h3 id="sheet-add-title">Aggiungi</h3>
     <div class="sub">Cosa vuoi registrare?</div>
     <div class="sheet-content">
       <div class="seg seg-add-type" id="add-type-seg">
@@ -1229,6 +1297,58 @@
           </div>
         </div>
         <button class="btn" onclick="App.saveSalary()" id="sal-save-btn">Salva stipendio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter sheet -->
+  <div class="sheet" id="sheet-filter">
+    <div class="sheet-handle"></div>
+    <h3>Ordina e filtra</h3>
+    <div class="sub">Personalizza la vista dei movimenti del mese.</div>
+    <div class="sheet-content">
+      <div class="field">
+        <label>Ordina per</label>
+        <div class="seg" id="filt-sort">
+          <button class="on" data-sort="date">Data</button>
+          <button data-sort="amount">Importo</button>
+          <button data-sort="alpha">Nome</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Direzione</label>
+        <div class="seg" id="filt-dir">
+          <button class="on" data-dir="desc"><span style="font-size:14px;">↓</span> Decrescente</button>
+          <button data-dir="asc"><span style="font-size:14px;">↑</span> Crescente</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <div class="seg" id="filt-type">
+          <button class="on" data-type="all">Tutti</button>
+          <button data-type="expense"><span class="dot" style="background:var(--red);"></span>Spese</button>
+          <button data-type="credit"><span class="dot" style="background:var(--green);"></span>Accrediti</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Categoria</label>
+        <div class="seg" id="filt-cat">
+          <button class="on" data-cat="all">Tutte</button>
+          <button data-cat="primario"><span class="dot" style="background:var(--gold);"></span>Pri</button>
+          <button data-cat="secondario"><span class="dot" style="background:var(--blue);"></span>Sec</button>
+          <button data-cat="risparmi"><span class="dot" style="background:var(--green);"></span>Ris</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Raggruppamento</label>
+        <div class="seg" id="filt-group">
+          <button class="on" data-group="on">Attivo</button>
+          <button data-group="off">Disattivo</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn-sec" onclick="App.resetFilters()" style="flex:1;">Reset</button>
+        <button class="btn" onclick="App.applyFilters()" style="flex:2;">Applica</button>
       </div>
     </div>
   </div>
@@ -1343,6 +1463,9 @@ const App = (() => {
   let viewYear = state.currentYear;
   let viewMonth = new Date().getMonth(); // 0-11
   let editMode = false;
+  const DEFAULT_FILTERS = { sort:'date', dir:'desc', type:'all', cat:'all', group:'on' };
+  let filters = { ...DEFAULT_FILTERS };
+  let editingExpenseId = null;
 
   // ---- Persistence ----
   function load(){
@@ -2033,54 +2156,205 @@ const App = (() => {
       credEl.style.display = 'none';
     }
 
-    // Expenses — grouping by description+category+credit-flag within the month
+    // Expenses — apply filters + sort + (optional) grouping
     const list = document.getElementById('exp-list');
     list.innerHTML = '';
-    const sorted = [...md.expenses].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
-    document.getElementById('exp-count').textContent = `${sorted.length} ${sorted.length === 1 ? 'voce' : 'voci'}`;
 
-    if (sorted.length === 0){
+    const all = md.expenses;
+    let filtered = all.filter(e => {
+      if (filters.type === 'expense' && e.credit) return false;
+      if (filters.type === 'credit' && !e.credit) return false;
+      if (filters.cat !== 'all' && e.category !== filters.cat) return false;
+      return true;
+    });
+
+    // Sort key per entry
+    const sortKey = (e) => {
+      if (filters.sort === 'amount') return e.amount;
+      if (filters.sort === 'alpha'){
+        const d = (e.desc || '').trim().toLowerCase();
+        return d || 'zzz_' + e.category;
+      }
+      return e.date || '';  // date
+    };
+    const dirMul = filters.dir === 'asc' ? 1 : -1;
+    filtered.sort((a,b) => {
+      const av = sortKey(a), bv = sortKey(b);
+      if (av < bv) return -1 * dirMul;
+      if (av > bv) return  1 * dirMul;
+      return 0;
+    });
+
+    document.getElementById('exp-count').textContent =
+      `${filtered.length} ${filtered.length === 1 ? 'voce' : 'voci'}` +
+      (filtered.length !== all.length ? ` (di ${all.length})` : '');
+
+    // Render filter chips for active filters
+    renderFilterChips();
+    document.getElementById('filter-dot').style.display = isFiltersActive() ? 'block' : 'none';
+
+    if (filtered.length === 0){
+      const empty = all.length === 0 ? 'Nessuna spesa registrata.' : 'Nessun movimento corrisponde ai filtri.';
+      const sub = all.length === 0 ? 'Tocca + per aggiungerne una' : 'Modifica i filtri o premi Reset.';
       list.innerHTML = `
         <div class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <div>Nessuna spesa registrata.</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-faint);">Tocca + per aggiungerne una</div>
+          <div>${empty}</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-faint);">${sub}</div>
         </div>
       `;
+    } else if (filters.group === 'off'){
+      // No grouping — render each entry individually
+      filtered.forEach(e => renderExpenseRow(list, e));
+      bindRowActions(list);
     } else {
-      // Build grouping key: lowercase trimmed desc + category + credit flag
-      // If desc is empty, treat each entry as its own group (no merge of "untitled" entries)
+      // Grouped rendering
       const groupKey = (e) => {
         const d = (e.desc || '').toLowerCase().trim();
-        if (!d) return '__solo__' + e.id;  // unique per entry → won't group
+        if (!d) return '__solo__' + e.id;
         return d + '|' + e.category + '|' + (e.credit ? 'c' : 'e');
       };
-      // Preserve insertion order = sort order (most recent first)
+      // Build groups in pass order (filtered already sorted)
       const groups = new Map();
-      sorted.forEach(e => {
+      filtered.forEach(e => {
         const k = groupKey(e);
         if (!groups.has(k)) groups.set(k, []);
         groups.get(k).push(e);
       });
 
-      groups.forEach((entries, key) => {
+      // Reorder groups so that aggregate sort key matches global ordering
+      // (e.g. for amount sort, group sort by total amount)
+      const groupArr = [...groups.entries()].map(([k, entries]) => {
+        let key;
+        if (filters.sort === 'amount') key = entries.reduce((s,e) => s + e.amount, 0);
+        else if (filters.sort === 'alpha') key = (entries[0].desc || '').trim().toLowerCase() || 'zzz';
+        else key = entries.reduce((max, e) => e.date > max ? e.date : max, '');
+        return { k, entries, key };
+      });
+      groupArr.sort((a, b) => {
+        if (a.key < b.key) return -1 * dirMul;
+        if (a.key > b.key) return  1 * dirMul;
+        return 0;
+      });
+
+      groupArr.forEach(({entries, k}) => {
         if (entries.length === 1){
           renderExpenseRow(list, entries[0]);
         } else {
-          renderGroupRow(list, entries, key);
+          renderGroupRow(list, entries, k);
         }
       });
-
-      list.querySelectorAll('.del-btn').forEach(b => {
-        b.onclick = (ev) => {
-          ev.stopPropagation();
-          deleteExpense(b.dataset.id);
-        };
-      });
+      bindRowActions(list);
     }
 
     // Edit button color
     document.getElementById('month-edit-btn').style.color = editMode ? 'var(--gold)' : '';
+  }
+
+  function bindRowActions(list){
+    list.querySelectorAll('.del-btn').forEach(b => {
+      b.onclick = (ev) => { ev.stopPropagation(); deleteExpense(b.dataset.id); };
+    });
+    list.querySelectorAll('.edit-btn').forEach(b => {
+      b.onclick = (ev) => { ev.stopPropagation(); openEditExpense(b.dataset.id); };
+    });
+  }
+
+  function isFiltersActive(){
+    return filters.sort !== DEFAULT_FILTERS.sort ||
+           filters.dir !== DEFAULT_FILTERS.dir ||
+           filters.type !== DEFAULT_FILTERS.type ||
+           filters.cat !== DEFAULT_FILTERS.cat ||
+           filters.group !== DEFAULT_FILTERS.group;
+  }
+
+  function renderFilterChips(){
+    const wrap = document.getElementById('filter-chips');
+    const chips = [];
+    const sortLabels = { date:'Data', amount:'Importo', alpha:'Nome' };
+    const dirLabels = { desc:'↓', asc:'↑' };
+    if (filters.sort !== DEFAULT_FILTERS.sort || filters.dir !== DEFAULT_FILTERS.dir){
+      chips.push({ key:'sort', txt: `${sortLabels[filters.sort]} ${dirLabels[filters.dir]}` });
+    }
+    if (filters.type !== 'all'){
+      chips.push({ key:'type', txt: filters.type === 'expense' ? 'Solo spese' : 'Solo accrediti' });
+    }
+    if (filters.cat !== 'all'){
+      const catLabel = { primario:'Primario', secondario:'Secondario', risparmi:'Risparmi' }[filters.cat];
+      chips.push({ key:'cat', txt: catLabel });
+    }
+    if (filters.group === 'off'){
+      chips.push({ key:'group', txt:'Non raggruppato' });
+    }
+    if (chips.length === 0){
+      wrap.style.display = 'none';
+      wrap.innerHTML = '';
+      return;
+    }
+    wrap.style.display = 'flex';
+    wrap.innerHTML = chips.map(c => `
+      <span class="chip" data-clear="${c.key}">${escapeHtml(c.txt)}<span class="x">×</span></span>
+    `).join('');
+    wrap.querySelectorAll('.chip').forEach(el => {
+      el.onclick = () => clearFilter(el.dataset.clear);
+    });
+  }
+
+  function clearFilter(key){
+    if (key === 'sort'){ filters.sort = DEFAULT_FILTERS.sort; filters.dir = DEFAULT_FILTERS.dir; }
+    else if (key === 'type') filters.type = 'all';
+    else if (key === 'cat') filters.cat = 'all';
+    else if (key === 'group') filters.group = 'on';
+    renderMonth();
+  }
+
+  function openFilters(){
+    // Sync seg buttons with current state
+    const setSeg = (segId, attr, val) => {
+      document.querySelectorAll('#'+segId+' button').forEach(b => {
+        b.classList.toggle('on', b.dataset[attr] === val);
+      });
+    };
+    setSeg('filt-sort', 'sort', filters.sort);
+    setSeg('filt-dir', 'dir', filters.dir);
+    setSeg('filt-type', 'type', filters.type);
+    setSeg('filt-cat', 'cat', filters.cat);
+    setSeg('filt-group', 'group', filters.group);
+    openSheet('sheet-filter');
+  }
+
+  function setupFilterSeg(){
+    const handlers = [
+      ['filt-sort', 'sort'],
+      ['filt-dir', 'dir'],
+      ['filt-type', 'type'],
+      ['filt-cat', 'cat'],
+      ['filt-group', 'group'],
+    ];
+    handlers.forEach(([segId, key]) => {
+      document.querySelectorAll('#'+segId+' button').forEach(b => {
+        b.onclick = () => {
+          document.querySelectorAll('#'+segId+' button').forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+        };
+      });
+    });
+  }
+
+  function applyFilters(){
+    filters.sort = document.querySelector('#filt-sort button.on').dataset.sort;
+    filters.dir = document.querySelector('#filt-dir button.on').dataset.dir;
+    filters.type = document.querySelector('#filt-type button.on').dataset.type;
+    filters.cat = document.querySelector('#filt-cat button.on').dataset.cat;
+    filters.group = document.querySelector('#filt-group button.on').dataset.group;
+    closeAllSheets();
+    renderMonth();
+  }
+
+  function resetFilters(){
+    filters = { ...DEFAULT_FILTERS };
+    closeAllSheets();
+    renderMonth();
   }
 
   function renderExpenseRow(list, e){
@@ -2100,7 +2374,10 @@ const App = (() => {
         <div class="meta">${dateStr}${isCredit ? ' · Accredito' : ''}</div>
       </div>
       <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(e.amount)}</div>
-      <button class="del-btn" data-id="${e.id}">
+      <button class="edit-btn row-action" data-id="${e.id}" title="Modifica">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="del-btn" data-id="${e.id}" title="Elimina">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
       </button>
     `;
@@ -2201,11 +2478,20 @@ const App = (() => {
       item.innerHTML = `
         <div class="date">${dateStr}</div>
         <div class="amt num ${isCredit ? 'credit' : 'expense'}">${sign}${fmtCur(e.amount)}</div>
-        <button class="del-btn" data-id="${e.id}">
+        <button class="edit-btn" data-id="${e.id}" title="Modifica">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="del-btn" data-id="${e.id}" title="Elimina">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         </button>
       `;
       list.appendChild(item);
+    });
+    list.querySelectorAll('.edit-btn').forEach(b => {
+      b.onclick = () => {
+        closeAllSheets();
+        setTimeout(() => openEditExpense(b.dataset.id), 200);
+      };
     });
     list.querySelectorAll('.del-btn').forEach(b => {
       b.onclick = () => {
@@ -2307,6 +2593,8 @@ const App = (() => {
   function openAddSheet(){
     addType = 'expense';
     editingSalaryId = null;
+    editingExpenseId = null;
+    document.getElementById('sheet-add-title').textContent = 'Aggiungi';
     // Setup type seg: in December show tredicesima
     const isDec = viewMonth === 11;
     document.getElementById('add-tredici-btn').style.display = isDec ? 'flex' : 'none';
@@ -2329,6 +2617,36 @@ const App = (() => {
     document.getElementById('sal-ris').value = '0';
     updateSplitBars();
     document.getElementById('sal-save-btn').textContent = 'Salva stipendio';
+
+    openSheet('sheet-add');
+  }
+
+  function openEditExpense(id){
+    // Find entry across all months/years (in case user filtered or grouped)
+    const md = monthData(viewYear, viewMonth);
+    const entry = md.expenses.find(e => e.id === id);
+    if (!entry) return;
+    editingExpenseId = id;
+    editingSalaryId = null;
+    addType = entry.credit ? 'credit' : 'expense';
+    document.getElementById('sheet-add-title').textContent = entry.credit ? 'Modifica accredito' : 'Modifica spesa';
+
+    // Hide tredicesima button (not relevant for expense edit)
+    const isDec = viewMonth === 11;
+    document.getElementById('add-tredici-btn').style.display = isDec ? 'flex' : 'none';
+    document.querySelectorAll('#add-type-seg button').forEach(b => b.classList.remove('on'));
+    document.querySelector(`#add-type-seg button[data-type="${addType}"]`).classList.add('on');
+    showAddForm(addType);
+
+    // Pre-fill expense form
+    document.getElementById('exp-amount').value = entry.amount;
+    document.getElementById('exp-date').value = entry.date || todayISO(viewYear, viewMonth);
+    document.getElementById('exp-desc').value = entry.desc || '';
+    document.querySelectorAll('#exp-cat-seg button').forEach(b => b.classList.remove('on'));
+    document.querySelector(`#exp-cat-seg button[data-cat="${entry.category}"]`).classList.add('on');
+
+    // Update save button
+    document.getElementById('exp-save-btn').textContent = entry.credit ? 'Aggiorna accredito' : 'Aggiorna spesa';
 
     openSheet('sheet-add');
   }
@@ -2485,24 +2803,66 @@ const App = (() => {
     const desc = document.getElementById('exp-desc').value.trim();
     const isCredit = (addType === 'credit');
 
-    // determine month from date
+    // determine target month from date
     const d = new Date(date);
-    const y = d.getFullYear();
-    const m = d.getMonth();
-    ensureYear(y);
+    const ny = d.getFullYear();
+    const nm = d.getMonth();
+    ensureYear(ny);
+
+    if (editingExpenseId){
+      // UPDATE — locate the entry across the current month and remove from there,
+      // then re-insert in the (possibly new) month/year derived from date.
+      // Search current month first then fall back to all months in viewYear.
+      let originY = viewYear, originM = viewMonth;
+      let oldEntry = null;
+      const cur = monthData(viewYear, viewMonth);
+      oldEntry = cur.expenses.find(e => e.id === editingExpenseId);
+      if (!oldEntry){
+        outer: for (const y in state.years){
+          for (const m in state.years[y].months){
+            const md = state.years[y].months[m];
+            const found = md.expenses.find(e => e.id === editingExpenseId);
+            if (found){ oldEntry = found; originY = parseInt(y); originM = parseInt(m); break outer; }
+          }
+        }
+      }
+      if (!oldEntry){ toast('Voce non trovata'); editingExpenseId = null; return; }
+      // Remove from origin
+      state.years[originY].months[originM].expenses =
+        state.years[originY].months[originM].expenses.filter(e => e.id !== editingExpenseId);
+      // Push updated entry into target month (preserve same id)
+      const updated = {
+        id: editingExpenseId,
+        date,
+        category: cat,
+        amount: round2(amount),
+        desc,
+      };
+      if (isCredit) updated.credit = true;
+      state.years[ny].months[nm].expenses.push(updated);
+      editingExpenseId = null;
+      save();
+      closeAllSheets();
+      toast(isCredit ? 'Accredito aggiornato' : 'Spesa aggiornata');
+      if (ny === viewYear && nm === viewMonth) renderMonth();
+      else renderHome();
+      return;
+    }
+
+    // CREATE
     const entry = {
       id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      date: date,
+      date,
       category: cat,
       amount: round2(amount),
-      desc: desc
+      desc,
     };
     if (isCredit) entry.credit = true;
-    state.years[y].months[m].expenses.push(entry);
+    state.years[ny].months[nm].expenses.push(entry);
     save();
     closeAllSheets();
     toast(isCredit ? 'Accredito salvato' : 'Spesa salvata');
-    if (y === viewYear && m === viewMonth) renderMonth();
+    if (ny === viewYear && nm === viewMonth) renderMonth();
     else renderHome();
   }
 
@@ -2728,6 +3088,7 @@ const App = (() => {
   function init(){
     load();
     setupAddTypeSeg();
+    setupFilterSeg();
     if (!state.onboardingDone){
       showScreen('screen-onboarding');
     } else {
@@ -2769,7 +3130,8 @@ const App = (() => {
     init,
     showHome, openCurrentMonth, openMonth, openSettings, showStats,
     changeYear,
-    openAddSheet, openAddSalary, openEditSalary,
+    openAddSheet, openAddSalary, openEditSalary, openEditExpense,
+    openFilters, applyFilters, resetFilters,
     saveExpense, saveSalary,
     deleteSalary,
     openInitialBalance, saveInitialBalance,
