@@ -375,6 +375,45 @@
   .exp-row .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .exp-row .amt{font-size:15px;font-weight:700;color:var(--red);white-space:nowrap;}
   .exp-row .amt.credit{color:var(--green);}
+  .exp-row.group{cursor:pointer;}
+  .exp-row.group:active{background:var(--surface);}
+  .exp-row .count-badge{
+    display:inline-block;background:var(--surface-2);color:var(--text-dim);
+    font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;
+    margin-left:6px;letter-spacing:0.02em;
+    border:1px solid var(--border-soft);
+  }
+  .exp-row .chev{
+    width:14px;height:14px;color:var(--text-faint);flex-shrink:0;margin-left:4px;
+  }
+
+  /* Group detail sheet */
+  .group-header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;padding:8px 22px 14px;
+  }
+  .group-header h3{margin:0 0 4px;padding:0;}
+  .group-header .sub{margin:0;padding:0;}
+  .group-total{font-size:22px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;}
+  .group-total.credit{color:var(--green);}
+  .group-total.expense{color:var(--red);}
+  .group-list{margin-top:8px;}
+  .group-item{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 4px;border-bottom:1px solid var(--border-soft);
+  }
+  .group-item:last-child{border-bottom:none;}
+  .group-item .date{font-size:13px;color:var(--text-dim);flex:1;}
+  .group-item .amt{font-size:15px;font-weight:700;white-space:nowrap;}
+  .group-item .amt.credit{color:var(--green);}
+  .group-item .amt.expense{color:var(--red);}
+  .group-item .del-btn{
+    width:30px;height:30px;border-radius:8px;border:none;background:transparent;
+    color:var(--text-faint);display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;
+  }
+  .group-item .del-btn svg{width:16px;height:16px;}
+  .group-item .del-btn:active{background:var(--surface-2);color:var(--red);}
   .exp-row .del-btn{
     background:transparent;border:none;color:var(--text-faint);
     width:32px;height:32px;border-radius:50%;cursor:pointer;
@@ -986,6 +1025,21 @@
     </div>
   </div>
 
+  <!-- Group detail sheet (multiple entries with same description) -->
+  <div class="sheet" id="sheet-group">
+    <div class="sheet-handle"></div>
+    <div class="group-header">
+      <div>
+        <h3 id="group-title">—</h3>
+        <div class="sub" id="group-sub">—</div>
+      </div>
+      <div class="group-total num" id="group-total">€ 0</div>
+    </div>
+    <div class="sheet-content">
+      <div class="group-list" id="group-list"></div>
+    </div>
+  </div>
+
   <!-- Initial balance sheet -->
   <div class="sheet" id="sheet-initial">
     <div class="sheet-handle"></div>
@@ -1440,7 +1494,7 @@ const App = (() => {
       credEl.style.display = 'none';
     }
 
-    // Expenses
+    // Expenses — grouping by description+category+credit-flag within the month
     const list = document.getElementById('exp-list');
     list.innerHTML = '';
     const sorted = [...md.expenses].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
@@ -1455,36 +1509,179 @@ const App = (() => {
         </div>
       `;
     } else {
+      // Build grouping key: lowercase trimmed desc + category + credit flag
+      // If desc is empty, treat each entry as its own group (no merge of "untitled" entries)
+      const groupKey = (e) => {
+        const d = (e.desc || '').toLowerCase().trim();
+        if (!d) return '__solo__' + e.id;  // unique per entry → won't group
+        return d + '|' + e.category + '|' + (e.credit ? 'c' : 'e');
+      };
+      // Preserve insertion order = sort order (most recent first)
+      const groups = new Map();
       sorted.forEach(e => {
-        const row = document.createElement('div');
-        row.className = 'exp-row' + (editMode ? ' editable' : '');
-        const catLabel = e.category === 'primario' ? 'PRI' : e.category === 'secondario' ? 'SEC' : 'RIS';
-        const catClass = e.category === 'primario' ? 'pri' : e.category === 'secondario' ? 'sec' : 'ris';
-        const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'short'}) : '';
-        const isCredit = !!e.credit;
-        const fallback = isCredit ? 'Accredito' : (e.category.charAt(0).toUpperCase() + e.category.slice(1));
-        const desc = e.desc || fallback;
-        const sign = isCredit ? '+' : '−';
-        row.innerHTML = `
-          <span class="cat-dot ${catClass}">${catLabel}</span>
-          <div class="body">
-            <div class="desc">${escapeHtml(desc)}</div>
-            <div class="meta">${dateStr}${isCredit ? ' · Accredito' : ''}</div>
-          </div>
-          <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(e.amount)}</div>
-          <button class="del-btn" data-id="${e.id}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          </button>
-        `;
-        list.appendChild(row);
+        const k = groupKey(e);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(e);
       });
+
+      groups.forEach((entries, key) => {
+        if (entries.length === 1){
+          renderExpenseRow(list, entries[0]);
+        } else {
+          renderGroupRow(list, entries, key);
+        }
+      });
+
       list.querySelectorAll('.del-btn').forEach(b => {
-        b.onclick = () => deleteExpense(b.dataset.id);
+        b.onclick = (ev) => {
+          ev.stopPropagation();
+          deleteExpense(b.dataset.id);
+        };
       });
     }
 
     // Edit button color
     document.getElementById('month-edit-btn').style.color = editMode ? 'var(--gold)' : '';
+  }
+
+  function renderExpenseRow(list, e){
+    const row = document.createElement('div');
+    row.className = 'exp-row' + (editMode ? ' editable' : '');
+    const catLabel = e.category === 'primario' ? 'PRI' : e.category === 'secondario' ? 'SEC' : 'RIS';
+    const catClass = e.category === 'primario' ? 'pri' : e.category === 'secondario' ? 'sec' : 'ris';
+    const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'short'}) : '';
+    const isCredit = !!e.credit;
+    const fallback = isCredit ? 'Accredito' : (e.category.charAt(0).toUpperCase() + e.category.slice(1));
+    const desc = e.desc || fallback;
+    const sign = isCredit ? '+' : '−';
+    row.innerHTML = `
+      <span class="cat-dot ${catClass}">${catLabel}</span>
+      <div class="body">
+        <div class="desc">${escapeHtml(desc)}</div>
+        <div class="meta">${dateStr}${isCredit ? ' · Accredito' : ''}</div>
+      </div>
+      <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(e.amount)}</div>
+      <button class="del-btn" data-id="${e.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      </button>
+    `;
+    list.appendChild(row);
+  }
+
+  function renderGroupRow(list, entries, key){
+    const first = entries[0];
+    const isCredit = !!first.credit;
+    const catLabel = first.category === 'primario' ? 'PRI' : first.category === 'secondario' ? 'SEC' : 'RIS';
+    const catClass = first.category === 'primario' ? 'pri' : first.category === 'secondario' ? 'sec' : 'ris';
+    const fallback = isCredit ? 'Accredito' : (first.category.charAt(0).toUpperCase() + first.category.slice(1));
+    const desc = first.desc || fallback;
+    const total = entries.reduce((sum, e) => sum + e.amount, 0);
+    const sign = isCredit ? '+' : '−';
+    const count = entries.length;
+
+    const row = document.createElement('div');
+    row.className = 'exp-row group' + (editMode ? ' editable' : '');
+    row.innerHTML = `
+      <span class="cat-dot ${catClass}">${catLabel}</span>
+      <div class="body">
+        <div class="desc">${escapeHtml(desc)}<span class="count-badge">${count}×</span></div>
+        <div class="meta">${count} voci${isCredit ? ' · Accrediti' : ''}</div>
+      </div>
+      <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(total)}</div>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    `;
+
+    if (editMode){
+      // Replace chevron with delete-all button
+      const chev = row.querySelector('.chev');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`;
+      delBtn.style.display = 'inline-flex';
+      delBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        confirmAction(`Eliminare tutte le ${count} voci?`, `"${desc}"`, () => {
+          const ids = new Set(entries.map(e => e.id));
+          const md = monthData(viewYear, viewMonth);
+          md.expenses = md.expenses.filter(e => !ids.has(e.id));
+          save();
+          renderMonth();
+          toast(isCredit ? 'Accrediti eliminati' : 'Spese eliminate');
+        });
+      };
+      chev.replaceWith(delBtn);
+    }
+
+    row.onclick = (ev) => {
+      if (ev.target.closest('.del-btn')) return;
+      openGroupDetail(entries);
+    };
+    list.appendChild(row);
+  }
+
+  let currentGroupEntries = [];
+  function openGroupDetail(entries){
+    currentGroupEntries = entries;
+    renderGroupDetail();
+    openSheet('sheet-group');
+  }
+  function renderGroupDetail(){
+    // Refresh entries from current state in case of deletes
+    const md = monthData(viewYear, viewMonth);
+    const ids = new Set(currentGroupEntries.map(e => e.id));
+    const fresh = md.expenses.filter(e => ids.has(e.id));
+    currentGroupEntries = fresh;
+
+    if (fresh.length === 0){
+      closeAllSheets();
+      return;
+    }
+
+    const first = fresh[0];
+    const isCredit = !!first.credit;
+    const fallback = isCredit ? 'Accredito' : (first.category.charAt(0).toUpperCase() + first.category.slice(1));
+    const desc = first.desc || fallback;
+    const total = fresh.reduce((s, e) => s + e.amount, 0);
+    const sign = isCredit ? '+' : '−';
+    const catName = first.category.charAt(0).toUpperCase() + first.category.slice(1);
+    const typeLabel = isCredit ? 'Accrediti' : 'Spese';
+
+    document.getElementById('group-title').textContent = desc;
+    document.getElementById('group-sub').textContent = `${fresh.length} ${typeLabel.toLowerCase()} • ${catName}`;
+    const totEl = document.getElementById('group-total');
+    totEl.textContent = sign + fmtCur(total);
+    totEl.className = 'group-total num ' + (isCredit ? 'credit' : 'expense');
+
+    const list = document.getElementById('group-list');
+    list.innerHTML = '';
+    const sorted = [...fresh].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+    sorted.forEach(e => {
+      const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'}) : '—';
+      const item = document.createElement('div');
+      item.className = 'group-item';
+      item.innerHTML = `
+        <div class="date">${dateStr}</div>
+        <div class="amt num ${isCredit ? 'credit' : 'expense'}">${sign}${fmtCur(e.amount)}</div>
+        <button class="del-btn" data-id="${e.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      `;
+      list.appendChild(item);
+    });
+    list.querySelectorAll('.del-btn').forEach(b => {
+      b.onclick = () => {
+        const id = b.dataset.id;
+        const md = monthData(viewYear, viewMonth);
+        const entry = md.expenses.find(e => e.id === id);
+        const wasCredit = !!(entry && entry.credit);
+        md.expenses = md.expenses.filter(e => e.id !== id);
+        save();
+        renderMonth();
+        toast(wasCredit ? 'Accredito eliminato' : 'Spesa eliminata');
+        // Refresh modal or close if last
+        renderGroupDetail();
+      };
+    });
   }
 
   function buildStipCard(label, salary, isTredicesima){
