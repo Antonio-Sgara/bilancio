@@ -374,6 +374,7 @@
   .exp-row .desc{font-size:14px;font-weight:500;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;}
   .exp-row .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .exp-row .amt{font-size:15px;font-weight:700;color:var(--red);white-space:nowrap;}
+  .exp-row .amt.credit{color:var(--green);}
   .exp-row .del-btn{
     background:transparent;border:none;color:var(--text-faint);
     width:32px;height:32px;border-radius:50%;cursor:pointer;
@@ -494,9 +495,17 @@
     font-family:inherit;font-size:13px;font-weight:600;
     cursor:pointer;transition: all .15s;
     display:flex;align-items:center;justify-content:center;gap:6px;
+    min-width:0;
   }
   .seg button.on{background:var(--surface-2);color:var(--text);}
-  .seg button .dot{width:8px;height:8px;border-radius:50%;}
+  .seg button .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .seg-add-type button{font-size:12px;padding:9px 4px;gap:4px;letter-spacing:-0.01em;}
+  .seg-add-type button .dot{display:none;}
+  .seg-add-type button.on{box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);}
+  .seg-add-type button[data-type="expense"].on{color:var(--red);}
+  .seg-add-type button[data-type="credit"].on{color:var(--green);}
+  .seg-add-type button[data-type="salary"].on{color:var(--gold);}
+  .seg-add-type button[data-type="tredici"].on{color:var(--gold);}
 
   /* Split inputs */
   .splits-grid{
@@ -730,6 +739,7 @@
       <div style="text-align:right;">
         <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.14em;">Spese</div>
         <div class="num" style="font-size:18px;font-weight:700;color:var(--red);" id="detail-total-spent">€ 0</div>
+        <div class="num" id="detail-total-credit" style="font-size:12px;font-weight:600;color:var(--green);margin-top:2px;display:none;"></div>
       </div>
     </div>
 
@@ -898,16 +908,17 @@
     <h3>Aggiungi</h3>
     <div class="sub">Cosa vuoi registrare?</div>
     <div class="sheet-content">
-      <div class="seg" id="add-type-seg">
+      <div class="seg seg-add-type" id="add-type-seg">
         <button class="on" data-type="expense"><span class="dot" style="background:var(--red);"></span>Spesa</button>
+        <button data-type="credit"><span class="dot" style="background:var(--green);"></span>Accredito</button>
         <button data-type="salary"><span class="dot" style="background:var(--gold);"></span>Stipendio</button>
         <button data-type="tredici" id="add-tredici-btn" style="display:none;"><span class="dot" style="background:var(--red);"></span>Tredicesima</button>
       </div>
 
-      <!-- Expense form -->
+      <!-- Expense form (used for both expense and credit) -->
       <div id="form-expense" style="margin-top:18px;">
         <div class="field">
-          <label>Importo</label>
+          <label id="exp-amount-label">Importo</label>
           <input type="number" inputmode="decimal" class="amount num" id="exp-amount" placeholder="0,00" step="0.01" min="0">
         </div>
         <div class="field">
@@ -928,7 +939,7 @@
             <input type="text" id="exp-desc" placeholder="Facoltativa" maxlength="40">
           </div>
         </div>
-        <button class="btn" onclick="App.saveExpense()">Salva spesa</button>
+        <button class="btn" id="exp-save-btn" onclick="App.saveExpense()">Salva spesa</button>
       </div>
 
       <!-- Salary form -->
@@ -1145,20 +1156,33 @@ const App = (() => {
     return b;
   }
   function monthSpent(y, m){
+    // Solo le uscite (escluse le voci con credit:true)
     const md = monthData(y, m);
     const s = { primario: 0, secondario: 0, risparmi: 0 };
     md.expenses.forEach(e => {
+      if (e.credit) return;
       s[e.category] = (s[e.category] || 0) + e.amount;
     });
     return s;
   }
+  function monthCredits(y, m){
+    // Solo gli accrediti (voci con credit:true)
+    const md = monthData(y, m);
+    const c = { primario: 0, secondario: 0, risparmi: 0 };
+    md.expenses.forEach(e => {
+      if (!e.credit) return;
+      c[e.category] = (c[e.category] || 0) + e.amount;
+    });
+    return c;
+  }
   function monthRemaining(y, m){
     const b = monthBudgets(y, m);
     const s = monthSpent(y, m);
+    const c = monthCredits(y, m);
     return {
-      primario: b.primario - s.primario,
-      secondario: b.secondario - s.secondario,
-      risparmi: b.risparmi - s.risparmi
+      primario: b.primario - s.primario + c.primario,
+      secondario: b.secondario - s.secondario + c.secondario,
+      risparmi: b.risparmi - s.risparmi + c.risparmi
     };
   }
   function monthHasData(y, m){
@@ -1406,6 +1430,15 @@ const App = (() => {
     // Total spent header
     const totSpent = spent.primario + spent.secondario + spent.risparmi;
     document.getElementById('detail-total-spent').textContent = fmtCur(totSpent);
+    const credits = monthCredits(viewYear, viewMonth);
+    const totCredits = credits.primario + credits.secondario + credits.risparmi;
+    const credEl = document.getElementById('detail-total-credit');
+    if (totCredits > 0){
+      credEl.textContent = '+' + fmtCur(totCredits) + ' accrediti';
+      credEl.style.display = 'block';
+    } else {
+      credEl.style.display = 'none';
+    }
 
     // Expenses
     const list = document.getElementById('exp-list');
@@ -1428,14 +1461,17 @@ const App = (() => {
         const catLabel = e.category === 'primario' ? 'PRI' : e.category === 'secondario' ? 'SEC' : 'RIS';
         const catClass = e.category === 'primario' ? 'pri' : e.category === 'secondario' ? 'sec' : 'ris';
         const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'short'}) : '';
-        const desc = e.desc || (e.category.charAt(0).toUpperCase() + e.category.slice(1));
+        const isCredit = !!e.credit;
+        const fallback = isCredit ? 'Accredito' : (e.category.charAt(0).toUpperCase() + e.category.slice(1));
+        const desc = e.desc || fallback;
+        const sign = isCredit ? '+' : '−';
         row.innerHTML = `
           <span class="cat-dot ${catClass}">${catLabel}</span>
           <div class="body">
             <div class="desc">${escapeHtml(desc)}</div>
-            <div class="meta">${dateStr}</div>
+            <div class="meta">${dateStr}${isCredit ? ' · Accredito' : ''}</div>
           </div>
-          <div class="amt num">−${fmtCur(e.amount)}</div>
+          <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(e.amount)}</div>
           <button class="del-btn" data-id="${e.id}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           </button>
@@ -1603,8 +1639,15 @@ const App = (() => {
   }
 
   function showAddForm(type){
-    document.getElementById('form-expense').style.display = (type === 'expense') ? 'block' : 'none';
-    document.getElementById('form-salary').style.display = (type === 'expense') ? 'none' : 'block';
+    const isMovement = (type === 'expense' || type === 'credit');
+    document.getElementById('form-expense').style.display = isMovement ? 'block' : 'none';
+    document.getElementById('form-salary').style.display = isMovement ? 'none' : 'block';
+    // update labels for movement form
+    if (isMovement){
+      const isCredit = (type === 'credit');
+      document.getElementById('exp-save-btn').textContent = isCredit ? 'Salva accredito' : 'Salva spesa';
+      document.getElementById('exp-amount-label').textContent = isCredit ? 'Importo accredito' : 'Importo';
+    }
   }
 
   function setupAddTypeSeg(){
@@ -1613,7 +1656,7 @@ const App = (() => {
         document.querySelectorAll('#add-type-seg button').forEach(x => x.classList.remove('on'));
         b.classList.add('on');
         addType = b.dataset.type;
-        showAddForm(addType === 'expense' ? 'expense' : 'salary');
+        showAddForm(addType);
         if (addType === 'tredici'){
           document.getElementById('sal-save-btn').textContent = 'Salva tredicesima';
         } else if (addType === 'salary'){
@@ -1704,22 +1747,25 @@ const App = (() => {
     const cat = document.querySelector('#exp-cat-seg button.on').dataset.cat;
     const date = document.getElementById('exp-date').value || todayISO(viewYear, viewMonth);
     const desc = document.getElementById('exp-desc').value.trim();
+    const isCredit = (addType === 'credit');
 
     // determine month from date
     const d = new Date(date);
     const y = d.getFullYear();
     const m = d.getMonth();
     ensureYear(y);
-    state.years[y].months[m].expenses.push({
+    const entry = {
       id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
       date: date,
       category: cat,
       amount: round2(amount),
       desc: desc
-    });
+    };
+    if (isCredit) entry.credit = true;
+    state.years[y].months[m].expenses.push(entry);
     save();
     closeAllSheets();
-    toast('Spesa salvata');
+    toast(isCredit ? 'Accredito salvato' : 'Spesa salvata');
     if (y === viewYear && m === viewMonth) renderMonth();
     else renderHome();
   }
@@ -1776,10 +1822,12 @@ const App = (() => {
 
   function deleteExpense(id){
     const md = monthData(viewYear, viewMonth);
+    const entry = md.expenses.find(e => e.id === id);
+    const wasCredit = !!(entry && entry.credit);
     md.expenses = md.expenses.filter(e => e.id !== id);
     save();
     renderMonth();
-    toast('Spesa eliminata');
+    toast(wasCredit ? 'Accredito eliminato' : 'Spesa eliminata');
   }
 
   function deleteSalary(id){
