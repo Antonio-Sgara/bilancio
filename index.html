@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0d0f14">
+<meta name="theme-color" content="#faf8f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#faf8f3" id="theme-color-meta">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bilancio">
@@ -14,9 +15,44 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* Light theme (default) */
+    --bg: #faf8f3;
+    --bg-elev: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f0ece2;
+    --border: #d9d3c4;
+    --border-soft: #e9e4d6;
+    --text: #1e1d1a;
+    --text-dim: #6b6960;
+    --text-faint: #a09c92;
+    --gold: #b88b2a;
+    --gold-soft: rgba(184, 139, 42, 0.10);
+    --green: #4a8d63;
+    --green-soft: rgba(74, 141, 99, 0.10);
+    --red: #c0594c;
+    --red-soft: rgba(192, 89, 76, 0.10);
+    --blue: #4a6fb8;
+    --blue-soft: rgba(74, 111, 184, 0.10);
+    --primary: var(--gold);
+    --shadow: 0 8px 24px rgba(60, 50, 30, .12);
+    --shadow-strong: 0 12px 32px rgba(60, 50, 30, .15);
+    --hero-glow: rgba(184, 139, 42, 0.04);
+    --hero-bg: linear-gradient(180deg, #ffffff 0%, #fcfaf3 100%);
+    --hero-text: #1e1d1a;
+    --hero-text-dim: #6b6960;
+    --hero-border: #d9d3c4;
+    --surface-elev: rgba(60, 50, 30, 0.04);
+    --nav-bg: rgba(250, 248, 243, 0.92);
+    --backdrop: rgba(40, 35, 25, 0.42);
+    --radius: 18px;
+    --radius-sm: 12px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  [data-theme="dark"]{
     --bg: #0d0f14;
     --bg-elev: #14171f;
     --surface: #1a1d27;
@@ -34,12 +70,16 @@
     --red-soft: rgba(217, 122, 108, 0.12);
     --blue: #7a9bd9;
     --blue-soft: rgba(122, 155, 217, 0.12);
-    --primary: var(--gold);
     --shadow: 0 8px 24px rgba(0,0,0,.4);
-    --radius: 18px;
-    --radius-sm: 12px;
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bot: env(safe-area-inset-bottom, 0px);
+    --shadow-strong: 0 12px 32px rgba(0,0,0,.5);
+    --hero-glow: rgba(212, 168, 73, 0.18);
+    --hero-bg: linear-gradient(180deg, #1d2030 0%, #161924 100%);
+    --hero-text: #f0ebe0;
+    --hero-text-dim: #9ca0ad;
+    --hero-border: #2a2e3d;
+    --surface-elev: rgba(255, 255, 255, 0.03);
+    --nav-bg: rgba(13,15,20,0.85);
+    --backdrop: rgba(0, 0, 0, 0.55);
   }
 
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -68,7 +108,7 @@
   }
 
   .num{font-feature-settings:'tnum' 1, 'lnum' 1;font-variant-numeric:tabular-nums;}
-  .serif{font-family:'Instrument Serif', serif;font-weight:400;letter-spacing:-0.01em;}
+  .serif{font-weight:700;letter-spacing:-0.02em;}
 
   #app{
     position:relative;
@@ -93,7 +133,7 @@
     width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
     color:var(--gold);
   }
-  .brand-name{font-family:'Instrument Serif', serif;font-size:24px;letter-spacing:-0.01em;}
+  .brand-name{font-size:20px;font-weight:700;letter-spacing:-0.02em;}
   .brand-sub{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.18em;margin-left:2px;}
 
   .icon-btn{
@@ -117,34 +157,40 @@
     margin: 8px 16px 20px;
     padding: 22px 22px 24px;
     background:
-      radial-gradient(circle at 100% 0%, rgba(212,168,73,.18), transparent 60%),
-      linear-gradient(180deg, #1d2030 0%, #161924 100%);
+      radial-gradient(circle at 100% 0%, var(--hero-glow), transparent 60%),
+      var(--hero-bg);
+    color: var(--hero-text);
     border-radius: 22px;
-    border: 1px solid var(--border-soft);
+    border: 1px solid var(--hero-border);
     position:relative;overflow:hidden;
   }
   .hero::after{
     content:'';position:absolute;inset:0;
-    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><circle cx='1' cy='1' r='0.4' fill='%23fff' fill-opacity='0.03'/></svg>");
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><circle cx='1' cy='1' r='0.4' fill='%23000' fill-opacity='0.02'/></svg>");
     pointer-events:none;
   }
+  [data-theme="dark"] .hero::after{
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><circle cx='1' cy='1' r='0.4' fill='%23fff' fill-opacity='0.03'/></svg>");
+  }
   .hero-label{
-    font-size:11px;color:var(--text-dim);
+    font-size:11px;color: var(--hero-text-dim);
     text-transform:uppercase;letter-spacing:0.2em;
     display:flex;align-items:center;gap:8px;
   }
   .hero-amount{
-    font-family:'Instrument Serif', serif;
-    font-size:54px;line-height:1;
-    margin: 14px 0 6px;letter-spacing:-0.02em;
+    font-weight:700;
+    font-size:44px;line-height:1;
+    margin: 14px 0 6px;
+    letter-spacing:-0.03em;
+    font-variant-numeric: tabular-nums;
   }
-  .hero-amount .cents{color:var(--text-dim);font-size:0.55em;margin-left:2px;}
+  .hero-amount .cents{color:var(--hero-text-dim);font-size:0.55em;margin-left:2px;}
   .hero-delta{
     display:inline-flex;align-items:center;gap:6px;
-    font-size:13px;color:var(--text-dim);
+    font-size:13px;color:var(--hero-text-dim);
     padding:4px 10px;border-radius:99px;
-    background:rgba(255,255,255,0.04);
-    border:1px solid var(--border-soft);
+    background:var(--surface-elev);
+    border:1px solid var(--hero-border);
   }
   .hero-delta.positive{color:var(--green);}
   .hero-delta.negative{color:var(--red);}
@@ -154,14 +200,14 @@
     gap:8px;margin-top:22px;
   }
   .hero-cat{
-    background: rgba(255,255,255,0.03);
-    border:1px solid var(--border-soft);
+    background: var(--surface-elev);
+    border:1px solid var(--hero-border);
     border-radius:12px;
     padding:10px 9px 12px;
     min-width: 0;
   }
   .hero-cat-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;flex-shrink:0;}
-  .hero-cat-name{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;}
+  .hero-cat-name{font-size:10px;color:var(--hero-text-dim);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;}
   .hero-cat-name span:not(.hero-cat-dot){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .hero-cat-amount{font-size:16px;font-weight:700;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;}
 
@@ -175,7 +221,7 @@
     padding: 0 20px;margin-bottom:12px;
   }
   .year-bar h2{
-    font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;
+    font-size:18px;font-weight:700;letter-spacing:-0.02em;
   }
   .year-pill{
     display:inline-flex;align-items:center;gap:10px;
@@ -228,7 +274,7 @@
 
   /* Section title */
   .section-title{
-    font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;
+    font-size:18px;font-weight:700;letter-spacing:-0.02em;
     padding: 24px 20px 10px;
     display:flex;align-items:center;justify-content:space-between;
   }
@@ -262,13 +308,32 @@
   .settings-row .info .sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .settings-row .chev{color:var(--text-faint);}
 
+  /* Theme toggle iOS-style */
+  .theme-toggle{
+    width:44px;height:26px;border-radius:13px;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    position:relative;flex-shrink:0;
+    transition: background .2s;
+    cursor:pointer;
+  }
+  .theme-toggle-thumb{
+    position:absolute;top:2px;left:2px;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--bg);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transition: left .2s ease, background .2s;
+  }
+  [data-theme="dark"] .theme-toggle{background:var(--gold);border-color:var(--gold);}
+  [data-theme="dark"] .theme-toggle-thumb{left:20px;background:#fff;}
+
   /* ===== Month Detail ===== */
   .detail-header{
     padding: 4px 20px 14px;
     display:flex;align-items:center;justify-content:space-between;
   }
   .detail-title{
-    font-family:'Instrument Serif',serif;font-size:30px;font-weight:400;letter-spacing:-0.01em;
+    font-size:26px;font-weight:700;letter-spacing:-0.02em;
   }
   .detail-title small{font-family:'Manrope',sans-serif;font-size:13px;color:var(--text-dim);display:block;font-weight:500;letter-spacing:0;}
 
@@ -292,7 +357,7 @@
   }
   .stip-card.tredicesima .label{color:var(--red);}
   .stip-card .amount{
-    font-family:'Instrument Serif',serif;font-size:32px;line-height:1.1;margin:8px 0 4px;
+    font-size:26px;font-weight:700;line-height:1.15;letter-spacing:-0.02em;margin:8px 0 4px;
   }
   .stip-card .amount.empty{color:var(--text-faint);font-style:italic;}
   .stip-card .splits{
@@ -303,7 +368,7 @@
   .stip-card .actions{margin-top:12px;display:flex;gap:8px;}
 
   .btn-mini{
-    background:rgba(255,255,255,0.05);
+    background:var(--surface-elev);
     border:1px solid var(--border-soft);
     color:var(--text);
     padding:8px 14px;border-radius:99px;font-size:12px;font-weight:600;
@@ -499,9 +564,9 @@
     bottom: calc(80px + var(--safe-bot));
     width:56px;height:56px;border-radius:50%;
     background: var(--gold);
-    color: #1a1500;
+    color: var(--bg);
     border:none;cursor:pointer;
-    box-shadow: 0 8px 24px rgba(212,168,73,0.4), 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-strong);
     display:flex;align-items:center;justify-content:center;
     z-index: 30;
     transition: all .2s ease;
@@ -513,7 +578,7 @@
   .bottom-nav{
     position:fixed;bottom:0;left:0;right:0;
     padding-bottom: var(--safe-bot);
-    background: rgba(13,15,20,0.85);
+    background: var(--nav-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-top:1px solid var(--border-soft);
@@ -533,7 +598,7 @@
 
   /* ===== Modal / Sheet ===== */
   .modal-bd{
-    position:fixed;inset:0;background:rgba(0,0,0,0.6);
+    position:fixed;inset:0;background:var(--backdrop);
     backdrop-filter: blur(4px);
     z-index:40;
     opacity:0;pointer-events:none;
@@ -559,7 +624,7 @@
     background:var(--border);margin: 10px auto 6px;
   }
   .sheet h3{
-    font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;
+    font-size:20px;font-weight:700;letter-spacing:-0.02em;
     padding: 8px 22px 6px;
   }
   .sheet .sub{
@@ -584,7 +649,7 @@
   .field input:focus, .field select:focus, .field textarea:focus{
     border-color: var(--gold);
   }
-  .field input.amount{font-size:24px;font-weight:600;font-family:'Instrument Serif',serif;}
+  .field input.amount{font-size:24px;font-weight:600;font-weight:700;letter-spacing:-0.02em;}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
   .seg{
@@ -640,7 +705,7 @@
   .split-bar > div{transition: width .3s ease;}
 
   .btn{
-    width:100%;background:var(--gold);color:#1a1500;
+    width:100%;background:var(--gold);color:var(--bg);
     border:none;padding:14px;border-radius:14px;
     font-family:inherit;font-size:15px;font-weight:700;
     cursor:pointer;letter-spacing:0.02em;
@@ -688,7 +753,7 @@
   }
   .onb-icon svg{width:36px;height:36px;}
   .onb h2{
-    font-family:'Instrument Serif',serif;font-size:30px;font-weight:400;margin-bottom:8px;letter-spacing:-0.01em;
+    font-size:24px;font-weight:700;margin-bottom:8px;letter-spacing:-0.02em;
   }
   .onb p{color:var(--text-dim);font-size:14px;margin-bottom:24px;}
 
@@ -703,7 +768,7 @@
     transition: all .2s;
   }
   .dialog.open{opacity:1;pointer-events:auto;transform:translate(-50%, -50%) scale(1);}
-  .dialog h4{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;margin-bottom:8px;}
+  .dialog h4{font-size:18px;font-weight:700;letter-spacing:-0.02em;margin-bottom:8px;}
   .dialog p{color:var(--text-dim);font-size:14px;margin-bottom:16px;}
 
   /* Scrollbar */
@@ -862,14 +927,26 @@
   .stats-cmp .abs{font-size:11px;color:var(--text-faint);}
 
   @media (min-width: 481px){
-    body{background:#06070a;}
+    body{background: var(--surface-2);}
+    [data-theme="dark"] body{background:#06070a;}
     #app{
-      box-shadow: 0 0 60px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow-strong);
       min-height:100vh;
       background:var(--bg);
     }
   }
 </style>
+<script>
+  // Apply theme BEFORE first paint to avoid flash of wrong theme
+  (function(){
+    try {
+      var t = localStorage.getItem('bilancio_theme') || 'light';
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      var meta = document.querySelector('meta[name="theme-color"]:not([media])');
+      if (meta) meta.setAttribute('content', t === 'dark' ? '#0d0f14' : '#faf8f3');
+    } catch(e) {}
+  })();
+</script>
 </head>
 <body>
 <div id="app">
@@ -1010,7 +1087,23 @@
       <div style="width:40px;"></div>
     </div>
 
-    <div class="section-title" style="padding-top:0;">Conto</div>
+    <div class="section-title" style="padding-top:0;">Aspetto</div>
+    <div class="settings-card">
+      <div class="settings-row" onclick="App.toggleTheme()">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </span>
+        <div class="info">
+          <div class="lbl">Tema</div>
+          <div class="sub" id="theme-sub">Chiaro</div>
+        </div>
+        <span class="theme-toggle" id="theme-toggle-ui">
+          <span class="theme-toggle-thumb"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="section-title">Conto</div>
     <div class="settings-card">
       <div class="settings-row" onclick="App.openInitialBalance()">
         <span class="icon">
@@ -1097,8 +1190,8 @@
       <div style="width:36px;"></div>
     </div>
 
-    <div style="padding:8px 22px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div style="font-family:'Instrument Serif',serif;font-size:34px;line-height:1;">Statistiche</div>
+    <div style="padding:8px 22px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div style="font-weight:700;letter-spacing:-0.02em;font-size:26px;line-height:1;">Statistiche</div>
       <div class="year-pill">
         <button onclick="App.changeYear(-1)">‹</button>
         <span id="stats-year-label">2026</span>
@@ -2570,6 +2663,32 @@ const App = (() => {
     const ds = state.defaultSplit;
     document.getElementById('default-split-sub').textContent =
       `${ds.primario}% Pri • ${ds.secondario}% Sec • ${ds.risparmi}% Ris`;
+    // Theme sub
+    const t = getCurrentTheme();
+    document.getElementById('theme-sub').textContent = t === 'dark' ? 'Scuro' : 'Chiaro';
+  }
+
+  // ---- Theme ----
+  function getCurrentTheme(){
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+  function applyTheme(t){
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('bilancio_theme', t); } catch(e){}
+    const meta = document.querySelector('meta[name="theme-color"]:not([media])');
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#0d0f14' : '#faf8f3');
+  }
+  function toggleTheme(){
+    const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    // Update settings sub label
+    const sub = document.getElementById('theme-sub');
+    if (sub) sub.textContent = next === 'dark' ? 'Scuro' : 'Chiaro';
+    // Re-render screens that have charts (SVG uses CSS variables, but bar fills use inline `fill`)
+    const active = document.querySelector('.screen.active')?.id;
+    if (active === 'screen-stats') renderStats();
+    else if (active === 'screen-home') renderHome();
   }
 
   // ---- Sheet management ----
@@ -3137,6 +3256,7 @@ const App = (() => {
     openInitialBalance, saveInitialBalance,
     openDefaultSplit, saveDefaultSplit,
     exportData, importData, confirmReset,
+    toggleTheme,
     closeAllSheets, closeDialog,
     completeOnboarding,
     toggleEdit
