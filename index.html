@@ -308,8 +308,7 @@
   .settings-row .info .sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .settings-row .chev{color:var(--text-faint);}
 
-  /* Theme toggle iOS-style */
-  .theme-toggle{
+  /* Theme toggle iOS-style */  .theme-toggle{
     width:44px;height:26px;border-radius:13px;
     background:var(--surface-2);
     border:1px solid var(--border-soft);
@@ -488,8 +487,23 @@
     cursor:pointer;
   }
   .btn-sec:active{background:var(--surface);}
+  .btn-text-danger{
+    width:100%;padding:14px;margin-top:8px;
+    background:transparent;
+    color:var(--red);
+    border:none;
+    font-size:14px;font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .btn-text-danger svg{width:16px;height:16px;}
+  .btn-text-danger:active{background:var(--red-soft);border-radius:10px;}
+
+  .exp-row.clickable{cursor:pointer;}
+  .exp-row.clickable:active{background:var(--surface-2);}
   .exp-row.group{cursor:pointer;}
-  .exp-row.group:active{background:var(--surface);}
+  .exp-row.group:active{background:var(--surface-2);}
   .exp-row .count-badge{
     display:inline-block;background:var(--surface-2);color:var(--text-dim);
     font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;
@@ -518,39 +532,16 @@
     display:flex;align-items:center;gap:12px;
     padding:14px 4px;border-bottom:1px solid var(--border-soft);
   }
+  .group-item.clickable{cursor:pointer;padding-left:8px;padding-right:8px;margin:0 -4px;border-radius:8px;}
+  .group-item.clickable:active{background:var(--surface-2);}
   .group-item:last-child{border-bottom:none;}
-  .group-item .date{font-size:13px;color:var(--text-dim);flex:1;}
+  .group-item .date{font-size:13px;color:var(--text);flex:1;font-weight:500;}
   .group-item .amt{font-size:15px;font-weight:700;white-space:nowrap;}
   .group-item .amt.credit{color:var(--green);}
   .group-item .amt.expense{color:var(--red);}
-  .group-item .del-btn{
-    width:30px;height:30px;border-radius:8px;border:none;background:transparent;
-    color:var(--text-faint);display:inline-flex;align-items:center;justify-content:center;
-    cursor:pointer;flex-shrink:0;
+  .group-item .chev{
+    width:14px;height:14px;color:var(--text-faint);flex-shrink:0;margin-left:4px;
   }
-  .group-item .del-btn svg{width:16px;height:16px;}
-  .group-item .del-btn:active{background:var(--surface-2);color:var(--red);}
-  .exp-row .del-btn, .exp-row .edit-btn{
-    background:transparent;border:none;color:var(--text-faint);
-    width:32px;height:32px;border-radius:50%;cursor:pointer;
-    display:none;align-items:center;justify-content:center;flex-shrink:0;
-    padding:0;
-  }
-  .exp-row .del-btn svg, .exp-row .edit-btn svg{width:16px;height:16px;}
-  .exp-row.editable .del-btn, .exp-row.editable .edit-btn{display:inline-flex;}
-  .exp-row .del-btn:active{background:var(--surface-2);color:var(--red);}
-  .exp-row .edit-btn:active{background:var(--surface-2);color:var(--gold);}
-  /* Group rows: edit-btn doesn't apply (no per-group edit, use modal); only delete shows */
-  .exp-row.group .edit-btn{display:none !important;}
-
-  /* Group items edit btn (in modal) */
-  .group-item .edit-btn{
-    width:30px;height:30px;border-radius:8px;border:none;background:transparent;
-    color:var(--text-faint);display:inline-flex;align-items:center;justify-content:center;
-    cursor:pointer;flex-shrink:0;padding:0;
-  }
-  .group-item .edit-btn svg{width:16px;height:16px;}
-  .group-item .edit-btn:active{background:var(--surface-2);color:var(--gold);}
 
   .empty-state{
     padding: 28px 20px;text-align:center;color:var(--text-dim);font-size:13px;
@@ -1030,12 +1021,7 @@
       <div style="font-size:12px;color:var(--text-dim);font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">
         Mese
       </div>
-      <button class="icon-btn" id="month-edit-btn" onclick="App.toggleEdit()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>
+      <div style="width:36px;"></div>
     </div>
 
     <div class="detail-header">
@@ -1348,6 +1334,10 @@
           </div>
         </div>
         <button class="btn" id="exp-save-btn" onclick="App.saveExpense()">Salva spesa</button>
+        <button class="btn-text-danger" id="exp-delete-btn" onclick="App.deleteExpenseFromForm()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          Elimina
+        </button>
       </div>
 
       <!-- Salary form -->
@@ -1555,7 +1545,6 @@ const App = (() => {
   };
   let viewYear = state.currentYear;
   let viewMonth = new Date().getMonth(); // 0-11
-  let editMode = false;
   const DEFAULT_FILTERS = { sort:'date', dir:'desc', type:'all', cat:'all', group:'on' };
   let filters = { ...DEFAULT_FILTERS };
   let editingExpenseId = null;
@@ -1717,7 +1706,6 @@ const App = (() => {
   }
   function openMonth(m){
     viewMonth = m;
-    editMode = false;
     renderMonth();
     showScreen('screen-month');
   }
@@ -2340,16 +2328,11 @@ const App = (() => {
       bindRowActions(list);
     }
 
-    // Edit button color
-    document.getElementById('month-edit-btn').style.color = editMode ? 'var(--gold)' : '';
   }
 
   function bindRowActions(list){
-    list.querySelectorAll('.del-btn').forEach(b => {
-      b.onclick = (ev) => { ev.stopPropagation(); deleteExpense(b.dataset.id); };
-    });
-    list.querySelectorAll('.edit-btn').forEach(b => {
-      b.onclick = (ev) => { ev.stopPropagation(); openEditExpense(b.dataset.id); };
+    list.querySelectorAll('.exp-row.clickable:not(.group)').forEach(row => {
+      row.onclick = () => openEditExpense(row.dataset.id);
     });
   }
 
@@ -2452,7 +2435,8 @@ const App = (() => {
 
   function renderExpenseRow(list, e){
     const row = document.createElement('div');
-    row.className = 'exp-row' + (editMode ? ' editable' : '');
+    row.className = 'exp-row clickable';
+    row.dataset.id = e.id;
     const catLabel = e.category === 'primario' ? 'PRI' : e.category === 'secondario' ? 'SEC' : 'RIS';
     const catClass = e.category === 'primario' ? 'pri' : e.category === 'secondario' ? 'sec' : 'ris';
     const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'short'}) : '';
@@ -2467,12 +2451,6 @@ const App = (() => {
         <div class="meta">${dateStr}${isCredit ? ' · Accredito' : ''}</div>
       </div>
       <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(e.amount)}</div>
-      <button class="edit-btn row-action" data-id="${e.id}" title="Modifica">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
-      <button class="del-btn" data-id="${e.id}" title="Elimina">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-      </button>
     `;
     list.appendChild(row);
   }
@@ -2489,7 +2467,7 @@ const App = (() => {
     const count = entries.length;
 
     const row = document.createElement('div');
-    row.className = 'exp-row group' + (editMode ? ' editable' : '');
+    row.className = 'exp-row group clickable';
     row.innerHTML = `
       <span class="cat-dot ${catClass}">${catLabel}</span>
       <div class="body">
@@ -2499,32 +2477,7 @@ const App = (() => {
       <div class="amt num${isCredit ? ' credit' : ''}">${sign}${fmtCur(total)}</div>
       <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
     `;
-
-    if (editMode){
-      // Replace chevron with delete-all button
-      const chev = row.querySelector('.chev');
-      const delBtn = document.createElement('button');
-      delBtn.className = 'del-btn';
-      delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`;
-      delBtn.style.display = 'inline-flex';
-      delBtn.onclick = (ev) => {
-        ev.stopPropagation();
-        confirmAction(`Eliminare tutte le ${count} voci?`, `"${desc}"`, () => {
-          const ids = new Set(entries.map(e => e.id));
-          const md = monthData(viewYear, viewMonth);
-          md.expenses = md.expenses.filter(e => !ids.has(e.id));
-          save();
-          renderMonth();
-          toast(isCredit ? 'Accrediti eliminati' : 'Spese eliminate');
-        });
-      };
-      chev.replaceWith(delBtn);
-    }
-
-    row.onclick = (ev) => {
-      if (ev.target.closest('.del-btn')) return;
-      openGroupDetail(entries);
-    };
+    row.onclick = () => openGroupDetail(entries);
     list.appendChild(row);
   }
 
@@ -2567,38 +2520,18 @@ const App = (() => {
     sorted.forEach(e => {
       const dateStr = e.date ? new Date(e.date).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'}) : '—';
       const item = document.createElement('div');
-      item.className = 'group-item';
+      item.className = 'group-item clickable';
+      item.dataset.id = e.id;
       item.innerHTML = `
         <div class="date">${dateStr}</div>
         <div class="amt num ${isCredit ? 'credit' : 'expense'}">${sign}${fmtCur(e.amount)}</div>
-        <button class="edit-btn" data-id="${e.id}" title="Modifica">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="del-btn" data-id="${e.id}" title="Elimina">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-        </button>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       `;
-      list.appendChild(item);
-    });
-    list.querySelectorAll('.edit-btn').forEach(b => {
-      b.onclick = () => {
+      item.onclick = () => {
         closeAllSheets();
-        setTimeout(() => openEditExpense(b.dataset.id), 200);
+        setTimeout(() => openEditExpense(e.id), 200);
       };
-    });
-    list.querySelectorAll('.del-btn').forEach(b => {
-      b.onclick = () => {
-        const id = b.dataset.id;
-        const md = monthData(viewYear, viewMonth);
-        const entry = md.expenses.find(e => e.id === id);
-        const wasCredit = !!(entry && entry.credit);
-        md.expenses = md.expenses.filter(e => e.id !== id);
-        save();
-        renderMonth();
-        toast(wasCredit ? 'Accredito eliminato' : 'Spesa eliminata');
-        // Refresh modal or close if last
-        renderGroupDetail();
-      };
+      list.appendChild(item);
     });
   }
 
@@ -2646,11 +2579,6 @@ const App = (() => {
       `;
     }
     return card;
-  }
-
-  function toggleEdit(){
-    editMode = !editMode;
-    renderMonth();
   }
 
   // ---- Rendering: Settings ----
@@ -2714,6 +2642,7 @@ const App = (() => {
     editingSalaryId = null;
     editingExpenseId = null;
     document.getElementById('sheet-add-title').textContent = 'Aggiungi';
+    document.getElementById('exp-delete-btn').style.display = 'none';
     // Setup type seg: in December show tredicesima
     const isDec = viewMonth === 11;
     document.getElementById('add-tredici-btn').style.display = isDec ? 'flex' : 'none';
@@ -2741,9 +2670,15 @@ const App = (() => {
   }
 
   function openEditExpense(id){
-    // Find entry across all months/years (in case user filtered or grouped)
-    const md = monthData(viewYear, viewMonth);
-    const entry = md.expenses.find(e => e.id === id);
+    // Find entry across all months/years
+    let entry = null;
+    for (const y in state.years){
+      for (const m in state.years[y].months){
+        const e = state.years[y].months[m].expenses.find(x => x.id === id);
+        if (e){ entry = e; break; }
+      }
+      if (entry) break;
+    }
     if (!entry) return;
     editingExpenseId = id;
     editingSalaryId = null;
@@ -2764,8 +2699,9 @@ const App = (() => {
     document.querySelectorAll('#exp-cat-seg button').forEach(b => b.classList.remove('on'));
     document.querySelector(`#exp-cat-seg button[data-cat="${entry.category}"]`).classList.add('on');
 
-    // Update save button
+    // Update save button + show delete btn
     document.getElementById('exp-save-btn').textContent = entry.credit ? 'Aggiorna accredito' : 'Aggiorna spesa';
+    document.getElementById('exp-delete-btn').style.display = 'inline-flex';
 
     openSheet('sheet-add');
   }
@@ -3036,13 +2972,50 @@ const App = (() => {
   }
 
   function deleteExpense(id){
-    const md = monthData(viewYear, viewMonth);
-    const entry = md.expenses.find(e => e.id === id);
-    const wasCredit = !!(entry && entry.credit);
-    md.expenses = md.expenses.filter(e => e.id !== id);
+    // Searches across all months for the entry (used by group modal removed; kept for safety)
+    let foundY = null, foundM = null, entry = null;
+    for (const y in state.years){
+      for (const m in state.years[y].months){
+        const md = state.years[y].months[m];
+        const e = md.expenses.find(x => x.id === id);
+        if (e){ foundY = y; foundM = m; entry = e; break; }
+      }
+      if (entry) break;
+    }
+    if (!entry) return;
+    const wasCredit = !!entry.credit;
+    state.years[foundY].months[foundM].expenses =
+      state.years[foundY].months[foundM].expenses.filter(e => e.id !== id);
     save();
     renderMonth();
     toast(wasCredit ? 'Accredito eliminato' : 'Spesa eliminata');
+  }
+
+  function deleteExpenseFromForm(){
+    if (!editingExpenseId) return;
+    // Look up the entry to get the description for the confirm message
+    let entry = null;
+    for (const y in state.years){
+      for (const m in state.years[y].months){
+        const e = state.years[y].months[m].expenses.find(x => x.id === editingExpenseId);
+        if (e){ entry = e; break; }
+      }
+      if (entry) break;
+    }
+    if (!entry) return;
+    const isCredit = !!entry.credit;
+    const desc = entry.desc || (isCredit ? 'Accredito' : 'Spesa');
+    const label = isCredit ? 'accredito' : 'spesa';
+    confirmAction(
+      `Eliminare ${label}?`,
+      `"${desc}" — ${fmtCur(entry.amount)}. L'azione non può essere annullata.`,
+      () => {
+        const id = editingExpenseId;
+        editingExpenseId = null;
+        closeAllSheets();
+        deleteExpense(id);
+      }
+    );
   }
 
   function deleteSalary(id){
@@ -3252,14 +3225,13 @@ const App = (() => {
     openAddSheet, openAddSalary, openEditSalary, openEditExpense,
     openFilters, applyFilters, resetFilters,
     saveExpense, saveSalary,
-    deleteSalary,
+    deleteSalary, deleteExpenseFromForm,
     openInitialBalance, saveInitialBalance,
     openDefaultSplit, saveDefaultSplit,
     exportData, importData, confirmReset,
     toggleTheme,
     closeAllSheets, closeDialog,
-    completeOnboarding,
-    toggleEdit
+    completeOnboarding
   };
 })();
 
